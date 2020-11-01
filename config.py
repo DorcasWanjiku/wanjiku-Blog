@@ -18,8 +18,8 @@ class Config:
     MAIL_USE_TLS = True
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
-    SUBJECT_PREFIX = 'the C blog'
-    SENDER_EMAIL = 'wanjohi.carol75@gmail.com'
+    SUBJECT_PREFIX = 'Wanjiku-Blog'
+    SENDER_EMAIL = 'smallwanjiku@gmail.com'
 
 class ProdConfig(Config):
     '''
@@ -36,7 +36,7 @@ class TestConfig(Config):
         Config: The parent configuration class with General configuration settings 
     '''
     
-    SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://carol:carol1@localhost/personal_bog_test'
+    SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://moringa:smallwanjiku@localhost/Wanjiku-blog'
 
 class DevConfig(Config):
     '''
@@ -46,8 +46,7 @@ class DevConfig(Config):
         Config: The parent configuration class with General configuration settings
     '''
     
-    SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://carol:carol1@localhost/personal_bog'
-
+    SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://moringa:smallwanjiku@localhost/Wanjiku-blog'
     DEBUG = True
 
 
