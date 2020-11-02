@@ -113,7 +113,7 @@ def new_post():
             new_post.save_post()
             subscribers = User.get_subscribers()
             subscribers = ",".join(subscribers)
-            mail_message("New post in the C blog","email/update_user",subscribers)
+            mail_message("New post in the Wanjiku blog","email/update_user",subscribers)
 
             return redirect(url_for('.writer'))
 

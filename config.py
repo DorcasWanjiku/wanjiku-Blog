@@ -36,7 +36,7 @@ class TestConfig(Config):
         Config: The parent configuration class with General configuration settings 
     '''
     
-    SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://moringa:smallwanjiku@localhost/Wanjiku-blog'
+    SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://moringa:sh3k1l33@localhost/blog'
 
 class DevConfig(Config):
     '''
@@ -46,7 +46,7 @@ class DevConfig(Config):
         Config: The parent configuration class with General configuration settings
     '''
     
-    SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://moringa:smallwanjiku@localhost/Wanjiku-blog'
+    SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://moringa:sh3k1l33@localhost/blog'
     DEBUG = True
 
 
