@@ -1,18 +1,22 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField,TextAreaField,SubmitField
-from wtforms.validators import Required
-
-class CommentForm(FlaskForm):
-    '''
-    Class to create a wtf form for creating a feedback on a post
-    '''
-    comment_content =  TextAreaField('Comment', validators=[Required()])
+from wtforms import StringField,PasswordField,SubmitField,BooleanField,TextAreaField
+from wtforms.validators import Required,Email,EqualTo
+from ..models import User
+from wtforms import ValidationError
+    
+    
+    
+class BlogForm(FlaskForm):    
+    blogTitle = StringField('Blog Title',validators=[Required()])
+    blogDescription = StringField('Description',validators = [Required()])
     submit = SubmitField('Submit')
 
-class PostForm(FlaskForm):
-    '''
-    Class to create a wtf form for creating a post
-    '''
-    post_title = StringField('Post Title')
-    post_content = TextAreaField('Post Content')
+
+class UpdateProfile(FlaskForm):
+    bio = TextAreaField('Tell us about you.',validators = [Required()])
+    submit = SubmitField('Submit')
+
+
+class CommentForm(FlaskForm):
+    comment = TextAreaField('Write a comment', validators=[Required()])
     submit = SubmitField('Submit')

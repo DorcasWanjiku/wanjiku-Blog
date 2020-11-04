@@ -1,218 +1,109 @@
-
- 
 from flask import render_template,request,redirect,url_for,abort,flash
-from . import main
-from ..models import User,Role,Post,Comment
-from .forms import CommentForm,PostForm
 from flask_login import login_required,current_user
-from datetime import datetime, timezone
-from .. import db
-import markdown2
-from ..email import mail_message
+from . import main
+from .. import db,photos
+from ..models import User,Blog,Comment
+from .forms import BlogForm,UpdateProfile,CommentForm
+from ..requests import getQuotes
 
-
-# Views
-@main.route('/')
+@main.route('/',methods=['GET'])
 def index():
+    getquotes=getQuotes()
+    return render_template('index.html',getquotes=getquotes)
 
-    '''
-    View root page function that returns the index page and its data
-    '''
 
-    title = 'Home'
-    posts = Post.get_posts()
 
-    return render_template('index.html', title = title, posts=posts )
-
-@main.route('/post/<int:id>')
-def post(id):
-
-    '''
-    View post page function that returns a page with a post and its comments
-    '''
-    post = Post.query.get(id)
-    title = f'Post {post.id}'
-
-    comments = Comment.get_comments(id)
-
-    format_post = markdown2.markdown(post.post_content,extras=["code-friendly", "fenced-code-blocks"])
-
-    return render_template('post.html', title=title, post=post, comments=comments, format_post=format_post )
-
-@main.route('/post/comment/new/<int:id>', methods=['GET','POST'])
+@main.route('/comment/new/<int:id>', methods=['GET', 'POST'])
 @login_required
-def new_comment(id):
+def newComment(id):
+    blog = Blog.query.filter_by(id = id).all()
+    blogComments = Comment.query.filter_by(blog_id=id).all()
+    comment_form = CommentForm()
+    if comment_form.validate_on_submit():
+        comment = comment_form.comment.data
+        new_comment = Comment(blog_id=id, comment=comment, user=current_user)
+        new_comment.saveComment()
+    return render_template('newComment.html', blog=blog, blog_comments=blogComments, comment_form=comment_form)
 
-    '''
-    View new comment function that returns a page with a form to create a comment for the specified post
-    '''
-    post = Post.query.filter_by(id=id).first()
 
-    if post is None:
-        abort(404)
 
-    form = CommentForm()
 
-    if form.validate_on_submit():
-        comment_content = form.comment_content.data
-        new_comment = Comment( comment_content=comment_content, post=post, user=current_user)
-        new_comment.save_comment()
-
-        return redirect(url_for('.post', id=post.id ))
-
-    title = 'New Comment'
-    return render_template('new_comment.html', title=title, comment_form=form)
-
-@main.route('/subscribe/<int:id>')
+@main.route('/user/<uname>/update/pic',methods= ['POST'])
 @login_required
-def subscribe(id):
-    '''
-    View subscribe function that allows a user to subscribe for email updates when new post is posted
-    '''
-    user = User.query.get(id)
+def update_pic(uname):
+    user = User.query.filter_by(username = uname).first()
+    if 'photo' in request.files:
+        filename = photos.save(request.files['photo'])
+        path = f'photos/{filename}'
+        user.profile_pic_path = path
+        db.session.commit()
+    return redirect(url_for('main.profile',uname=uname))
+
+
+@main.route('/user/<uname>')
+def profile(uname):
+    user = User.query.filter_by(username = uname).first()
 
     if user is None:
         abort(404)
 
-    user.subcribe_user(id)
-    return redirect(url_for('.index'))
+    return render_template("profile/profile.html", user = user)
 
 
-@main.route('/writer')
+@main.route('/user/<uname>/update',methods = ['GET','POST'])
 @login_required
-def writer():
-
-    '''
-    View root page function that returns the writer page and its data
-    '''
-    if current_user.role.id == 1 :
-
-        title = 'Writer'
-        posts = Post.get_posts()
-
-        return render_template('writer.html', title = title, posts=posts )
-
-    else:
+def update_profile(uname):
+    user = User.query.filter_by(username = uname).first()
+    if user is None:
         abort(404)
 
-@main.route('/writer/post/new', methods=['GET','POST'])
+    form = UpdateProfile()
+
+    if form.validate_on_submit():
+        user.bio = form.bio.data
+
+        db.session.add(user)
+        db.session.commit()
+
+        return redirect(url_for('.profile',uname=user.username))
+
+    return render_template('profile/update.html',form =form)
+
+
+
+@main.route('/blog/newBlog',methods = ['GET','POST'])
 @login_required
-def new_post():
-
-    '''
-    View new post function that returns a page with a form to create a post
-    '''
-    if current_user.role.id == 1 :
-
-        form = PostForm()
-
-        if form.validate_on_submit():
-            post_title = form.post_title.data
-            post_content = form.post_content.data
-            new_post = Post(post_title=post_title, post_content=post_content, user=current_user)
-            new_post.save_post()
-            subscribers = User.get_subscribers()
-            subscribers = ",".join(subscribers)
-            mail_message("New post in the Wanjiku blog","email/update_user",subscribers)
-
-            return redirect(url_for('.writer'))
-
-        title = 'Create Post'
-
-        return render_template('new_post.html', title = title, post_form=form )
-
-    else:
-        abort(404)
-
-@main.route('/writer/post/<int:id>')
+def newBlog():
+    blogForm = BlogForm()
+    if blogForm.validate_on_submit():
+        titleBlog=blogForm.blogTitle.data
+        description = blogForm.blogDescription.data
+        newBlog = Blog(title_blog=titleBlog, description=description, user= current_user)
+        newBlog.save_blog()
+        return redirect(url_for('main.allBlogs'))
+    title = 'New Blog'
+    return render_template('new_blogs.html', title=title, blog_form=blogForm)
+@main.route('/blog/allblogs', methods=['GET', 'POST'])
 @login_required
-def writer_post(id):
-
-    '''
-    View post page function that returns the writer page and its data
-    '''
-    if current_user.role.id == 1 :
-
-        post = Post.query.get(id)
-        title = f'Post {post.id}'
-        comments = Comment.get_comments(id)
-
-        format_post = markdown2.markdown(post.post_content,extras=["code-friendly", "fenced-code-blocks"])
+def allBlogs():
+    blogs = Blog.get_all_blogs()
+    return render_template('blogs.html', blogs=blogs)
 
 
-        return render_template('writer_post.html', title = title, post=post, comments=comments, format_post=format_post )
-
-    else:
-        abort(404)
-
-@main.route('/writer/post/comment/delete/<int:id>')
+@main.route('/delete/<int:id>', methods=['GET', 'POST'])
 @login_required
-def delete_comment(id):
+def deleteComment(id):
+    comment =Comment.query.get_or_404(id)
+    db.session.delete(comment)
+    db.session.commit()
+    flash('comment succesfully deleted')
+    return redirect (url_for('main.allBlogs'))
 
-    '''
-    View function that deletes a comment and redirect to writer view function
-    '''
 
-    if current_user.role.id == 1:
-
-        comment = Comment.query.get(id)
-        comment.delete_single_comment(id)
-
-        return redirect(url_for('.writer'))
-
-    else:
-        abort(404)
-
-@main.route('/writer/post/delete/<int:id>')
+@main.route('/deleteblog/<int:id>', methods=['GET', 'POST'])
 @login_required
-def delete_post(id):
-
-    '''
-    View function that deletes a post and its comments and redirect to writer view function
-    '''
-
-    if current_user.role.id == 1:
-
-        post = Post.query.get(id)
-
-        post.delete_post(id)
-
-        return redirect(url_for('.writer'))
-
-
-    else:
-        abort(404)
-
-@main.route('/writer/post/update/<int:id>' , methods=['GET','POST'])
-@login_required
-def update_post(id):
-
-    '''
-    View function that updates a post and redirect to the writer view function
-    '''
-
-    if current_user.role.id == 1:
-
-        current_post = Post.query.get(id)
-
-        form = PostForm(obj=current_post)
-
-        if form.validate_on_submit():
-            
-            form.populate_obj(current_post)
-
-            comments = Comment.query.filter_by(post_id=id).all()
-            post = Post.query.filter_by(id=id).update({
-                'post_title': form.post_title.data, 
-                'post_content': form.post_content.data
-                })
-            db.session.commit()
-
-            return redirect(url_for('.writer'))
-
-        title = 'Update Post'
-
-        return render_template('update_post.html', title = title, update_post_form=form )
-
-    else:
-        abort(404)
+def deleteBlog(id):
+    blog = Blog.query.get_or_404(id)
+    db.session.delete(blog)
+    db.session.commit()
+    return redirect(url_for('main.allBlogs'))   
